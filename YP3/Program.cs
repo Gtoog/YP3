@@ -1,135 +1,215 @@
 ﻿using Microsoft.EntityFrameworkCore;
-using static Programm;
-using Npgsql;
+using System;
+using System.Linq;
 
-
-class Programm
+class Program
 {
     static void Main()
     {
-        Console.WriteLine("Введите комманду 1)");
-        string Name = "";
-        products product = new products { Name = "", much = 0, price = 0, date = "" };
-        int chose = int.Parse(Console.ReadLine());
-        switch (chose)
+        Console.WriteLine("Введите команду (1 - Добавить Продукт, 2 - Продать товар, 3 - Отчет по продажам):");
+        string name = "";
+        User user = new User { Name = "", QuantityInStock = 0, Price = 0 };
+        int choice = int.Parse(Console.ReadLine());
+
+        switch (choice)
         {
             case 1:
-                Console.WriteLine("Напишите название товара");   
-                Name = Console.ReadLine();
-                product = Search(Name);
-                if (product.Name != "")
+                Console.WriteLine("Напишите Продукт:");
+                name = Console.ReadLine();
+                user = SearchUser(name);
+                if (user == null)
                 {
+                    user = new User { Name = "", QuantityInStock = 0, Price = 0 };
+                    user.Name = name;
 
-                    Console.WriteLine("Введите количество товара");
-                    product.much = int.Parse(Console.ReadLine());
-                    Console.WriteLine("Введите количество цену");
-                    product.price = int.Parse(Console.ReadLine());
-                    Create(product);
+                    Console.WriteLine("Введите количество товара:");
+                    user.QuantityInStock = int.Parse(Console.ReadLine());
+                    Console.WriteLine("Введите цену товара:");
+                    user.Price = int.Parse(Console.ReadLine());
+                    CreateUser(user);
                 }
                 else
-                    Console.WriteLine("Уже имеется данный товар");
-                break;
-                case 2:
-                Console.WriteLine("Напишите название товара");
-                Name = Console.ReadLine();
-                product = Search(Name);
-                if (product != null)
                 {
-                    Console.WriteLine("Введите количество проданного товара");
-                    product.sell = int.Parse(Console.ReadLine());
-                    while(product.much <= product.sell)
-                    {
-                        Console.WriteLine("Продаж должно быть меньше чем на складе");
-                        product.sell = int.Parse(Console.ReadLine());
-                    }
-                    product.much -= product.sell;
-                    Console.WriteLine("Введите дату продажи ДД-ММ-ГГГГ");
-                    product.date = Console.ReadLine();
-                    UpdateProductInDatabase(product);
+                    Console.WriteLine("Продукт с таким именем уже существует.");
                 }
-                else 
-                    Console.WriteLine("Ваш продукт не найден"); 
                 break;
-            case 3: Console.WriteLine("ОТЧЕТ:\n");
+
+            case 2:
+                Console.WriteLine("Напишите Продукт:");
+                name = Console.ReadLine();
+                user = SearchUser(name);
+                if (user != null)
+                {
+                    Console.WriteLine("Введите количество проданного товара:");
+                    int quantitySold = int.Parse(Console.ReadLine());
+                    while (user.QuantityInStock < quantitySold)
+                    {
+                        Console.WriteLine("Продаж должно быть меньше чем на складе. Введите количество снова:");
+                        quantitySold = int.Parse(Console.ReadLine());
+                    }
+                    user.QuantityInStock -= quantitySold;
+                    UpdateUserInDatabase(user);
+
+                    // Запрос имени покупателя
+                    Console.WriteLine("Введите имя покупателя:");
+                    string buyerName = Console.ReadLine();
+
+                    // Запрос даты продажи у пользователя
+                    Console.WriteLine("Введите дату продажи (в формате ГГГГ-ММ-ДД):");
+                    string dateInput = Console.ReadLine();
+                    DateTime saleDate;
+
+                    // Попробуем преобразовать введённую строку в DateTime
+                    if (DateTime.TryParse(dateInput, out saleDate))
+                    {
+                        // Преобразуем в UTC, если дата не в UTC
+                        if (saleDate.Kind != DateTimeKind.Utc)
+                        {
+                            saleDate = TimeZoneInfo.ConvertTimeToUtc(saleDate);
+                        }
+
+                        // Рассчитываем сумму продажи
+                        int totalSaleAmount = quantitySold * user.Price;
+
+                        // Создание новой записи о продаже
+                        CreateSale(new Sale
+                        {
+                            UserName = user.Name,
+                            BuyerName = buyerName, // Сохраняем имя покупателя
+                            QuantitySold = quantitySold,
+                            SaleDate = saleDate, // Используем введённую дату
+                            Sell = totalSaleAmount // Сохраняем сумму продажи
+                        });
+
+                        // Выводим сумму продажи на экран
+                        Console.WriteLine($"Сумма продажи: {totalSaleAmount} (Количество: {quantitySold}, Цена за единицу: {user.Price})");
+                    }
+                    else
+                    {
+                        Console.WriteLine("Неверный формат даты. Продажа не была зарегистрирована.");
+                    }
+                }
+                else
+                {
+                    Console.WriteLine("Продукт не найден.");
+                }
+                break;
+
+            case 3:
+                Console.WriteLine("ОТЧЕТ ПО ПРОДАЖАМ:\n");
+                Console.WriteLine("Введите дату начала периода (в формате ГГГГ-ММ-ДД):");
+                string startDateInput = Console.ReadLine();
+                DateTime startDate;
+
+                // Попробуем преобразовать введённую строку в DateTime
+                if (DateTime.TryParse(startDateInput, out startDate))
+                {
+                    // Преобразуем в UTC, если дата не в UTC
+                    if (startDate.Kind != DateTimeKind.Utc)
+                    {
+                        startDate = TimeZoneInfo.ConvertTimeToUtc(startDate);
+                    }
+                }
+                else
+                {
+                    Console.WriteLine("Неверный формат даты. Отчет не был сформирован.");
+                    break;
+                }
+
+                Console.WriteLine("Введите дату конца периода (в формате ГГГГ-ММ-ДД):");
+                string endDateInput = Console.ReadLine();
+                DateTime endDate;
+
+                // Попробуем преобразовать введённую строку в DateTime
+                if (DateTime.TryParse(endDateInput, out endDate))
+                {
+                    // Преобразуем в UTC, если дата не в UTC
+                    if (endDate.Kind != DateTimeKind.Utc)
+                    {
+                        endDate = TimeZoneInfo.ConvertTimeToUtc(endDate);
+                    }
+                }
+                else
+                {
+                    Console.WriteLine("Неверный формат даты. Отчет не был сформирован.");
+                    break;
+                }
+
                 using (ApplicationContext db = new ApplicationContext())
                 {
-                    // получаем объекты из бд и выводим на консоль
-                    var users = db.Users.ToList();
-                    foreach (products u in users)
+                    var sales = db.Shops.Where(s => s.SaleDate >= startDate && s.SaleDate <= endDate).ToList();
+                    foreach (var sale in sales)
                     {
-                        Console.WriteLine($"{u.Id}.{u.Name} остаток {u.much} выручка {u.sell * u.price} последняя продажа {u.date}");
+                        Console.WriteLine($"Пользователь: {sale.UserName}, Имя покупателя: {sale.BuyerName}, Количество: {sale.QuantitySold}, Сумма: {sale.Sell}, Дата: {sale.SaleDate}");
                     }
                 }
                 break;
         }
-        void Create(products product)
-        {
-            using (ApplicationContext db = new ApplicationContext())
-            {
-                db.Users.AddRange(product);
-                db.SaveChanges();
-            }
-        }
-       products Search(String name)
-       {
-            products product = new products { Name = name };
-            bool SearchComplite = false;
-            using (ApplicationContext db = new ApplicationContext())
-            {
-                var users = db.Users.ToList();
-                foreach (products u in users)
-                {
-                    if(u.Name == name)
-                    {
-                        SearchComplite = true;
-                        product = u;
-                    }
-                }
-            }
-            if (SearchComplite)
-                return product;
-            else 
-                return null;
-       }
     }
 
-    static void UpdateProductInDatabase(products product)
+    static void CreateUser(User user)
     {
-        string connectionString = "Host=localhost;Port=5432;Database=shop;Username=postgres;Password=123"; // Замените на вашу строку подключения
-        using (var connection = new NpgsqlConnection(connectionString))
+        using (ApplicationContext db = new ApplicationContext())
         {
-            connection.Open();
-            string query = "UPDATE \"Users\" SET  \"much\" = @much,  \"sell\" = @sell,  \"date\" = @date WHERE  \"Name\" = @Name"; // Замените на ваше имя таблицы и столбца
-
-            using (var command = new NpgsqlCommand(query, connection))
-            {
-                command.Parameters.AddWithValue("much", product.much);
-                command.Parameters.AddWithValue("sell", product.sell);
-                command.Parameters.AddWithValue("date", product.date);
-                command.Parameters.AddWithValue("Name", product.Name);
-
-
-            }
+            db.Users.Add(user);
+            db.SaveChanges();
         }
     }
-    public class products
+
+    static User SearchUser(string name)
+    {
+        using (ApplicationContext db = new ApplicationContext())
+        {
+            return db.Users.FirstOrDefault(u => u.Name == name);
+        }
+    }
+
+    static void UpdateUserInDatabase(User user)
+    {
+        using (ApplicationContext db = new ApplicationContext())
+        {
+            db.Users.Update(user);
+            db.SaveChanges();
+        }
+    }
+
+    static void CreateSale(Sale sale)
+    {
+        using (ApplicationContext db = new ApplicationContext())
+        {
+            db.Shops.Add(sale);
+            db.SaveChanges();
+        }
+    }
+
+    public class User
     {
         public int Id { get; set; }
         public required string Name { get; set; }
-        public int much { get; set; }
-        public int price { get; set; }
-        public int sell { get; set; }
-        public string date { get; set; }
+        public int QuantityInStock { get; set; } // 'much'
+        public int Price { get; set; }
+    }
+
+    public class Sale
+    {
+        public int Id { get; set; }
+        public string UserName { get; set; } // 'name'
+        public string BuyerName { get; set; } // Новое поле для имени покупателя
+        public int QuantitySold { get; set; } // 'sell'
+        public DateTime SaleDate { get; set; } // 'date'
+        public int Sell { get; set; } // Поле для хранения суммы продажи
     }
 
     public class ApplicationContext : DbContext
     {
-        public DbSet<products> Users { get; set; } = null!;
+        public DbSet<User> Users { get; set; } = null!;
+        public DbSet<Sale> Shops { get; set; } = null!; // Переименовано в Shops
 
         public ApplicationContext()
         {
             Database.EnsureCreated();
         }
+
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
             optionsBuilder.UseNpgsql("Host=localhost;Port=5432;Database=shop;Username=postgres;Password=123");
