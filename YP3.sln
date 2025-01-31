@@ -1,0 +1,25 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.10.35013.160
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "YP3", "YP3\YP3.csproj", "{DA3E1751-C2A3-4116-8D38-E0B7F5A1F2CA}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{DA3E1751-C2A3-4116-8D38-E0B7F5A1F2CA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{DA3E1751-C2A3-4116-8D38-E0B7F5A1F2CA}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{DA3E1751-C2A3-4116-8D38-E0B7F5A1F2CA}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{DA3E1751-C2A3-4116-8D38-E0B7F5A1F2CA}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {97470C0B-A198-4CF2-8910-F7EEC9FE9403}
+	EndGlobalSection
+EndGlobal
